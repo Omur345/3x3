@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Rubik Full</title>
+
+    <style>
+      body {
+        margin: 0;
+        background: #111;
+        color: white;
+        font-family: sans-serif;
+      }
+
+      .wrapper {
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        perspective: 1000px;
+        flex-direction: column;
+      }
+
+      .rubik {
+        position: relative;
+        transform-style: preserve-3d;
+        transform: rotateX(-25deg) rotateY(30deg);
+      }
+
+      .cube {
+        position: absolute;
+        width: 60px;
+        height: 60px;
+        transform-style: preserve-3d;
+      }
+
+      .face {
+        position: absolute;
+        width: 60px;
+        height: 60px;
+        border: 2px solid #000;
+      }
+
+      .front {
+        background: red;
+        transform: translateZ(30px);
+      }
+      .back {
+        background: orange;
+        transform: rotateY(180deg) translateZ(30px);
+      }
+      .top {
+        background: white;
+        transform: rotateX(90deg) translateZ(30px);
+      }
+      .bottom {
+        background: yellow;
+        transform: rotateX(-90deg) translateZ(30px);
+      }
+      .right {
+        background: green;
+        transform: rotateY(90deg) translateZ(30px);
+      }
+      .left {
+        background: blue;
+        transform: rotateY(-90deg) translateZ(30px);
+      }
+
+      .controls {
+        margin-top: 200px;
+      }
+
+      button {
+        padding: 10px 15px;
+        margin: 5px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="rubik" id="rubik"></div>
+
+      <div class="controls">
+        <button onclick="rotateRight()">R</button>
+        <button onclick="rotateLeft()">L</button>
+        <button onclick="rotateTop()">U</button>
+        <button onclick="rotateBottom()">D</button>
+        <button onclick="rotateFront()">F</button>
+        <button onclick="rotateBack()">B</button>
+      </div>
+    </div>
+
+    <script>
+      const rubik = document.getElementById("rubik");
+      let cubes = [];
+      let busy = false;
+
+      for (let x = -1; x <= 1; x++) {
+        for (let y = -1; y <= 1; y++) {
+          for (let z = -1; z <= 1; z++) {
+            const cube = document.createElement("div");
+            cube.className = "cube";
+
+            cube.dataset.x = x;
+            cube.dataset.y = y;
+            cube.dataset.z = z;
+
+            setPosition(cube);
+
+            cube.innerHTML = `
+        <div class="face front"></div>
+        <div class="face back"></div>
+        <div class="face top"></div>
+        <div class="face bottom"></div>
+        <div class="face right"></div>
+        <div class="face left"></div>
+      `;
+
+            rubik.appendChild(cube);
+            cubes.push(cube);
+          }
+        }
+      }
+
+      function setPosition(c) {
+        c.style.transform = `translate3d(${c.dataset.x * 70}px, ${c.dataset.y * 70}px, ${c.dataset.z * 70}px)`;
+      }
+
+      function rotateLayer(filterFn, axis, updateFn) {
+        if (busy) return;
+        busy = true;
+
+        const group = document.createElement("div");
+        group.style.transformStyle = "preserve-3d";
+
+        rubik.appendChild(group);
+
+        const selected = cubes.filter(filterFn);
+        selected.forEach((c) => group.appendChild(c));
+
+        let keyframes;
+
+        if (axis === "x")
+          keyframes = [
+            { transform: "rotateX(0)" },
+            { transform: "rotateX(90deg)" },
+          ];
+        if (axis === "y")
+          keyframes = [
+            { transform: "rotateY(0)" },
+            { transform: "rotateY(90deg)" },
+          ];
+        if (axis === "z")
+          keyframes = [
+            { transform: "rotateZ(0)" },
+            { transform: "rotateZ(90deg)" },
+          ];
+
+        group.animate(keyframes, {
+          duration: 500,
+          easing: "ease-in-out",
+        });
+
+        setTimeout(() => {
+          selected.forEach((c) => rubik.appendChild(c));
+          group.remove();
+
+          selected.forEach(updateFn);
+          selected.forEach(setPosition);
+
+          busy = false;
+        }, 500);
+      }
+
+      function rotateRight() {
+        rotateLayer(
+          (c) => c.dataset.x == 1,
+          "x",
+          (c) => {
+            let y = +c.dataset.y;
+            let z = +c.dataset.z;
+            c.dataset.y = -z;
+            c.dataset.z = y;
+          },
+        );
+      }
+
+      function rotateLeft() {
+        rotateLayer(
+          (c) => c.dataset.x == -1,
+          "x",
+          (c) => {
+            let y = +c.dataset.y;
+            let z = +c.dataset.z;
+            c.dataset.y = z;
+            c.dataset.z = -y;
+          },
+        );
+      }
+
+      function rotateTop() {
+        rotateLayer(
+          (c) => c.dataset.y == -1,
+          "y",
+          (c) => {
+            let x = +c.dataset.x;
+            let z = +c.dataset.z;
+            c.dataset.x = z;
+            c.dataset.z = -x;
+          },
+        );
+      }
+
+      function rotateBottom() {
+        rotateLayer(
+          (c) => c.dataset.y == 1,
+          "y",
+          (c) => {
+            let x = +c.dataset.x;
+            let z = +c.dataset.z;
+            c.dataset.x = -z;
+            c.dataset.z = x;
+          },
+        );
+      }
+
+      function rotateFront() {
+        rotateLayer(
+          (c) => c.dataset.z == 1,
+          "z",
+          (c) => {
+            let x = +c.dataset.x;
+            let y = +c.dataset.y;
+            c.dataset.x = -y;
+            c.dataset.y = x;
+          },
+        );
+      }
+
+      function rotateBack() {
+        rotateLayer(
+          (c) => c.dataset.z == -1,
+          "z",
+          (c) => {
+            let x = +c.dataset.x;
+            let y = +c.dataset.y;
+            c.dataset.x = y;
+            c.dataset.y = -x;
+          },
+        );
+      }
+
+      setTimeout(() => {
+        rotateRight();
+        setTimeout(rotateTop, 600);
+        setTimeout(rotateFront, 1200);
+        setTimeout(rotateLeft, 1800);
+      }, 1000);
+    </script>
+  </body>
+</html>
